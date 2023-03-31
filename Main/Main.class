@@ -1,0 +1,76 @@
+package Main;
+
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+
+        Graph graph = new Graph();
+        Boolean exit = false;
+        Scanner scan = new Scanner(System.in);
+        System.out.println("Student name: Manduul Dugerjanjuu\n" +
+                "Class: CST280, Introduction to Algorithm\n" +
+                "Project 2\n\n\n");
+        System.out.println("\t\t\tWelcome to my graph algorithm program\n");
+        while (!exit) {
+
+            for (int i = 0; i < 100; i++) {
+                System.out.print("-");
+            }
+            System.out.println("\n\t\tPlease chose one of the options from below\n");
+            for (int i = 0; i < 60; i++) {
+                System.out.print("*");
+            }
+
+            System.out.print("\n\t\tMain Menu\n");
+
+            for (int i = 0; i < 60; i++) {
+                System.out.print("*");
+            }
+
+
+            System.out.println("\n1. Enter Graph file name\n" +
+                    "2. Calculate Reverse of the entered graph\n" +
+                    "3. Display Graph on console\n" +
+                    "4. Make Graph text file\n" +
+                    "5. Display reverse graph list\n" +
+                    "6. Exit\n");
+
+
+            System.out.print("\n\t\tPlease enter your choice: ");
+            int input = scan.nextInt();
+            System.out.println("int: " + input);
+
+            switch (input) {
+
+                // Please note make graph first and then chose case 2. Reverse the graph
+                case 1:
+                    graph.makeGraph();
+                    if (graph == null) {
+                        System.out.println("Sorry graph is not created. ");
+                        break;
+                    } else {
+                        System.out.println("Graph is created");
+                    }
+                    break;
+                case 2:
+                    graph.revGraph();
+                    graph.findRank();
+                    break;
+                case 3:
+                    graph.displayMap();
+                    break;
+                case 4:
+                    graph.makeFile(graph);
+                    break;
+                case 5:
+                    graph.displayRev();
+                    break;
+                case 6:
+                    exit = true;
+                    break;
+            }
+        }
+    }
+}
+

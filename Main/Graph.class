@@ -1,0 +1,221 @@
+package Main;
+
+import java.io.*;
+import java.text.DecimalFormat;
+import java.util.*;
+
+
+public class Graph {
+
+    String fileName;
+    public Node node;  // subclass node
+    public Map<Integer, Node> map = new HashMap<>();
+    Scanner input = new Scanner(System.in);
+    int biggest = 0;
+    int edgeNum = 0;
+    private static final DecimalFormat df = new DecimalFormat("0.00");
+
+
+    public void makeGraph() {
+
+        while (true) {
+            System.out.print("Enter file name: ");
+            String fileNameInput = input.nextLine();
+            File fileTxt = new File(fileNameInput);
+
+            if (fileTxt.exists()) {
+                this.fileName = fileNameInput;
+                break;
+            } else {
+                System.out.println("The file name does not exist. Please enter file name: ");
+            }
+        }
+        int graphIndex;
+
+        //get input from a user
+        try (FileReader reader = new FileReader(fileName);
+             BufferedReader br = new BufferedReader(reader)) {
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] s = line.split(" ");
+                int vId = Integer.parseInt(s[0]);
+                int oDegree = Integer.parseInt(s[1]);
+
+                node = new Node();
+                //create a node and set the edge number
+                node.setVertexId(vId);
+
+                // check if the input number exists inside the hashmap
+                if (!map.containsKey(vId)) {
+                    graphIndex = node.getVertexId();   // vId == graphIndex it might be unnecessary move
+                    node.setIndex(graphIndex);
+                    node.adj.add(oDegree);
+                    map.put(graphIndex, node);    // new node is created inside the HashMap
+                    map.putIfAbsent(oDegree, new Node()); // Check if adj edge is in the HashMap.
+                    // If not make new node with vertex_id = -1
+                }
+                // If HashMap contains index, Check if it has adjacent array list
+                else if (map.containsKey(vId) && (!map.get(vId).adj.contains(oDegree))) {
+                    map.get(vId).adj.add(oDegree); // add new adjacent array. Only the adj list is empty
+                }
+                storeBigger(vId, oDegree);  // compare two edges and save the larger value
+            }
+            // Store edge number size for later use
+            edgeNum = map.size();
+
+            for (int key : map.keySet()) {
+                int outAdj = map.get(key).adj.size();  // Get adj array list size
+                map.get(key).setOutDegree(outAdj);     // Set outDegree to array list size
+            }
+            for (int i = 0; i < biggest; i++) { // The largest number is the last index in the HashMap
+                map.putIfAbsent(i, new Node()); // Set all indexes that is not in the map with default value
+            }
+        } catch (IOException e) {
+            System.out.println("ERROR!!!");
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public void displayMap() {
+
+        System.out.print(String.format("%-20s %-20s %-20s %-20s%n", "vertex_id", "rank"
+                , "outdegree", "@ adjacency list"));
+        for (Map.Entry<Integer, Node> entry : map.entrySet()) {
+            int key = entry.getKey();
+
+            System.out.print(String.format("%-20s %-20s %-20s", key, df.format(map.get(key).getPageRank()),
+                    map.get(key).getOutDegree()));
+            for (int adjL : map.get(key).getAdj()) {
+                System.out.print(String.format("%-4s", adjL));
+            }
+            System.out.println();
+        }
+    }
+
+    public void displayRev() {
+        System.out.print(String.format("%-20s %-20s %-20s%n", "vertex_id", "revDegree", "revAdj"));
+        for (Map.Entry<Integer, Node> entry : map.entrySet()) {
+            int key = entry.getKey();
+
+            System.out.print(String.format("%-20s %-20s", key,
+                    map.get(key).getOutDegree()));
+            for (int rev : map.get(key).revAdj) {
+                System.out.print(String.format("%-4s", rev));
+            }
+            System.out.println();
+        }
+
+    }
+
+    // Reverse the graphic
+    public void revGraph() {
+        for (int key : map.keySet()) {
+            if (!map.get(key).adj.isEmpty()) {
+                map.get(key).setInGraph(true); // The edge is in the graph. Set inGraph to True
+                for (int adjNode : map.get(key).getAdj()) {   // Check each adj nodes in array list
+
+                    //Setting reverse degree number may not be usefull.
+                    // It can be deleted and it will not affect the programm's function.
+                    int revDeg = map.get(adjNode).getRevDegree();// Get adj lists rev number
+                    revDeg = (-1 != revDeg ? revDeg : 0);   // if reverse degree is -1 set it 0 and then increment
+                    revDeg++;
+
+                    // Using BFS, algorithm enters each adjArr list Nodes and save reverse edge in revAdj
+                    //array list. EXAMPLE: Index 0 has adjacent node is 2
+                    // We enter Node with vertex ID 2 and save 0 in revAdj list inside Node 2
+                    map.get(adjNode).setInGraph(true); // Set true inGraph. In the later function
+                    // we use only the Nodes with inGraph(true) nodes. It will optimise the speed
+                    map.get(adjNode).revAdj.add(key);
+                    map.get(adjNode).setRevDegree(revDeg);
+                }
+            } else if (!map.get(key).isVisited()) {
+                // If v = 0, v(reverse) = 0 edges, save it's own vertex ID inside
+                // it's own adjList and revAdjList. Loop to itself.
+                map.get(key).adj.add(key);
+                map.get(key).revAdj.add(key);
+                map.get(key).setVisited(true); // Set Node to visited
+            }
+        }
+        System.out.println("\n\tGraph reversed successfully using BFS method\n");
+    }
+
+    public void findRank() {
+
+        // Set initial rank 1/(n + 1). Total edge number is the total number of edges in the graph.
+        // The total number is set right after the while loop ended. edgeNum = map.size()
+        for (int key : map.keySet()) {
+            if (map.get(key).isInGraph()) {
+                map.get(key).setPageRank(1 / ((double) edgeNum + 1));
+            }
+        }
+        for (int i = 0; i < 50; i++) {
+            for (int j = 0; j < map.size(); j++) {
+                int oEdge = 0;
+                double rank = 0.0;
+                double totalRank = 0.0;
+                //Take only the nodes that is in the graph. isInGraph(true)
+                if (map.get(j).isInGraph()) {
+                    // The function first gets the reverse adjacent list and gets the edge number.
+                    // For example, in Node 0 all the edge pointing to 0 are saved in revAdj list. So we backtrack and enter those edge pointing to 0
+                    for (int revKey : map.get(j).revAdj) {
+
+                        // We are inside revEdge node that is pointing to "0."
+                        // The edge pointing to "0" is "5." Inside node "5" the initial (previous) rank is 1/n+1.
+                        // The initial rank of "5" is divided by outDegree number from node "5."
+                        // Inside node "5" --> (1 / (n + 1) / outDegree (out degree of vertex ID 5))
+                        // The result is saved in totalRank for later use.
+                        oEdge = map.get(revKey).getOutDegree();
+                        rank = map.get(revKey).getPageRank();
+                        rank = rank / (double) oEdge;
+                        totalRank = totalRank + rank;
+                    }
+                    // The result from node "5" is used to set up the rankPage of node "0" and it is saved in node "0"
+                    map.get(j).setPageRank(0.9 * (totalRank) + 0.1 / ((double) edgeNum + 1));
+                }
+            }
+        }
+    }
+
+    public void storeBigger(int a, int b) {
+
+        int temp = (a > b ? a : b);    // if a is larger return a. If not return b
+        biggest = (biggest > temp ? biggest : temp); // compare if the value is bigger than saved number
+    }
+
+    public void makeFile(Graph g) {
+
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Text file name does not need .txt at the end");
+        System.out.println("Please enter your text file name: ");
+
+        try {
+
+            File file = new File(sc.nextLine() + ".txt");
+
+            BufferedWriter bw = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+
+            bw.write(String.format("%-20s %-20s %-20s %-20s%n", "vertex_id", "rank"
+                    , "outdegree", "@ adjacency list"));
+            for (Map.Entry<Integer, Node> entry : map.entrySet()) {
+                int key = entry.getKey();
+
+                bw.write(String.format("%-20s %-20s %-20s", key, df.format(map.get(key).getPageRank()),
+                        map.get(key).getOutDegree()));
+                for (int adjL : map.get(key).getAdj()) {
+                    bw.write(String.format("%-4s", adjL));
+                }
+                bw.write("\n");
+            }
+
+            bw.flush();
+            bw.close();
+            System.out.println("\tText file created \n");
+
+        } catch (Exception e) {
+            System.out.println(" Sorry cannot proceed");
+            e.printStackTrace();
+        }
+    }
+}
